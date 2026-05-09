@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Koan — Circles Impulsion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f4f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    #app {
+      width: 100%;
+      max-width: 680px;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #e5e3dc;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      max-height: 720px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    }
+    #header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e3dc;
+    }
+    #avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #EEEDFE;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 600; color: #3C3489;
+      flex-shrink: 0;
+    }
+    .name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+    .sub { font-size: 12px; color: #888; }
+    #online { margin-left: auto; width: 9px; height: 9px; border-radius: 50%; background: #1D9E75; }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #fafaf8;
+    }
+    .row-koan { display: flex; gap: 10px; align-items: flex-start; }
+    .row-user { display: flex; gap: 10px; align-items: flex-start; flex-direction: row-reverse; }
+    .mini-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #EEEDFE;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #3C3489;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .bubble-koan {
+      background: #fff; border: 1px solid #e5e3dc;
+      border-radius: 2px 14px 14px 14px;
+      padding: 12px 16px; max-width: 82%;
+      font-size: 14px; line-height: 1.7; color: #1a1a1a;
+    }
+    .bubble-user {
+      background: #3C3489; color: #fff;
+      border-radius: 14px 2px 14px 14px;
+      padding: 11px 15px; max-width: 78%;
+      font-size: 14px; line-height: 1.6;
+    }
+    .stop-marker { font-weight: 700; color: #993C1D; }
+    #input-area {
+      display: flex; gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid #e5e3dc;
+    }
+    #user-input {
+      flex: 1; resize: none;
+      font-size: 14px; font-family: inherit;
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid #ddd; background: #fafaf8;
+      color: #1a1a1a; line-height: 1.5;
+      max-height: 120px; outline: none;
+    }
+    #user-input:focus { border-color: #7F77DD; }
+    #send-btn {
+      height: 42px; padding: 0 20px;
+      border-radius: 10px; font-size: 14px; font-weight: 600;
+      background: #3C3489; color: #fff; border: none;
+      cursor: pointer; flex-shrink: 0;
+    }
+    #send-btn:hover { background: #534AB7; }
+    #send-btn:disabled { opacity: 0.4; cursor: default; }
+    .dots span {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: #aaa; margin: 0 2px;
+      animation: blink 1.2s infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
+    #branding { text-align: center; padding: 8px; font-size: 11px; color: #bbb; }
+    #branding a { color: #bbb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <div id="avatar">K</div>
+      <div>
+        <p class="name">Koan</p>
+        <p class="sub">Circles Impulsion — Humaneo Coaching</p>
+      </div>
+      <div id="online"></div>
+    </div>
+    <div id="messages"></div>
+    <div id="input-area">
+      <textarea id="user-input" rows="2" placeholder="Réponds depuis ton ventre…"></textarea>
+      <button id="send-btn" onclick="handleSend()">Envoyer</button>
+    </div>
+  </div>
+  <div id="branding"><a href="https://humaneocoaching.com" target="_blank">humaneocoaching.com</a></div>
+
+  <script>
+    const history = [];
+    const msgs = document.getElementById('messages');
+    const input = document.getElementById('user-input');
+    const btn = document.getElementById('send-btn');
+    let busy = false;
+
+    function fmt(t) {
+      return t
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g,'<br>')
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\bSTOP\b/g,'<span class="stop-marker">STOP</span>');
+    }
+
+    function addBubble(role, html) {
+      const row = document.createElement('div');
+      row.className = role === 'assistant' ? 'row-koan' : 'row-user';
+      if (role === 'assistant') {
+        const av = document.createElement('div');
+        av.className = 'mini-av'; av.textContent = 'K';
+        row.appendChild(av);
+      }
+      const b = document.createElement('div');
+      b.className = role === 'assistant' ? 'bubble-koan' : 'bubble-user';
+      b.innerHTML = html;
+      row.appendChild(b);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function showTyping() {
+      const row = document.createElement('div');
+      row.className = 'row-koan'; row.id = 'typing-row';
+      const av = document.createElement('div');
+      av.className = 'mini-av'; av.textContent = 'K';
+      const b = document.createElement('div');
+      b.className = 'bubble-koan dots';
+      b.innerHTML = '<span></span><span></span><span></span>';
+      row.appendChild(av); row.appendChild(b);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    async function callAPI(messages) {
+      const res = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages })
+      });
+      const data = await res.json();
+      return data.reply || "Une erreur s'est produite.";
+    }
+
+    async function handleSend() {
+      const text = input.value.trim();
+      if (!text || busy) return;
+      busy = true; btn.disabled = true;
+      input.value = ''; input.style.height = 'auto';
+      addBubble('user', fmt(text));
+      history.push({ role: 'user', content: text });
+      showTyping();
+      try {
+        const reply = await callAPI(history);
+        document.getElementById('typing-row')?.remove();
+        history.push({ role: 'assistant', content: reply });
+        addBubble('assistant', fmt(reply));
+      } catch(e) {
+        document.getElementById('typing-row')?.remove();
+        addBubble('assistant', "Erreur de connexion. Réessaie dans un instant.");
+      }
+      busy = false; btn.disabled = false;
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    });
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+
+    (async () => {
+      busy = true; showTyping();
+      try {
+        const reply = await callAPI([{ role: 'user', content: "Commence la session avec ton message d'accueil." }]);
+        document.getElementById('typing-row')?.remove();
+        history.push({ role: 'assistant', content: reply });
+        addBubble('assistant', fmt(reply));
+      } catch(e) {
+        document.getElementById('typing-row')?.remove();
+        addBubble('assistant', "Bienvenue dans Circles Impulsion. Je m'appelle Koan.<br><br>La seule règle : réponds depuis ton ventre, pas depuis ta tête.<br><br>Quel est le projet sur lequel tu veux travailler ?");
+      }
+      busy = false; btn.disabled = false;
+    })();
+  </script>
+</body>
+</html>
