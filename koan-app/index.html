@@ -45,7 +45,17 @@
     }
     .name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
     .sub { font-size: 12px; color: #888; }
-    #online { margin-left: auto; width: 9px; height: 9px; border-radius: 50%; background: #1D9E75; }
+    #new-session-btn {
+      margin-left: auto;
+      font-size: 12px;
+      color: #888;
+      background: none;
+      border: 1px solid #e5e3dc;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    #new-session-btn:hover { color: #993C1D; border-color: #993C1D; }
     #messages {
       flex: 1;
       overflow-y: auto;
@@ -109,6 +119,13 @@
     @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
     #branding { text-align: center; padding: 8px; font-size: 11px; color: #bbb; }
     #branding a { color: #bbb; text-decoration: none; }
+    #saved-indicator {
+      font-size: 11px; color: #1D9E75;
+      padding: 4px 8px; opacity: 0;
+      transition: opacity 0.3s;
+      align-self: center;
+    }
+    #saved-indicator.visible { opacity: 1; }
   </style>
 </head>
 <body>
@@ -119,7 +136,8 @@
         <p class="name">Koan</p>
         <p class="sub">Circles Impulsion — Humaneo Coaching</p>
       </div>
-      <div id="online"></div>
+      <span id="saved-indicator">✓ Sauvegardé</span>
+      <button id="new-session-btn" onclick="newSession()">Nouvelle session</button>
     </div>
     <div id="messages"></div>
     <div id="input-area">
@@ -130,10 +148,12 @@
   <div id="branding"><a href="https://humaneocoaching.com" target="_blank">humaneocoaching.com</a></div>
 
   <script>
-    const history = [];
+    const STORAGE_KEY = 'koan_session';
+    let history = [];
     const msgs = document.getElementById('messages');
     const input = document.getElementById('user-input');
     const btn = document.getElementById('send-btn');
+    const savedIndicator = document.getElementById('saved-indicator');
     let busy = false;
 
     function fmt(t) {
@@ -144,7 +164,7 @@
         .replace(/\bSTOP\b/g,'<span class="stop-marker">STOP</span>');
     }
 
-    function addBubble(role, html) {
+    function addBubble(role, html, save = true) {
       const row = document.createElement('div');
       row.className = role === 'assistant' ? 'row-koan' : 'row-user';
       if (role === 'assistant') {
@@ -158,6 +178,7 @@
       row.appendChild(b);
       msgs.appendChild(row);
       msgs.scrollTop = msgs.scrollHeight;
+      if (save) saveSession();
     }
 
     function showTyping() {
@@ -171,6 +192,36 @@
       row.appendChild(av); row.appendChild(b);
       msgs.appendChild(row);
       msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function saveSession() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        savedIndicator.classList.add('visible');
+        setTimeout(() => savedIndicator.classList.remove('visible'), 2000);
+      } catch(e) {}
+    }
+
+    function loadSession() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          history = JSON.parse(saved);
+          history.forEach(msg => {
+            addBubble(msg.role, fmt(msg.content), false);
+          });
+          return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
+    function newSession() {
+      if (!confirm('Démarrer une nouvelle session ? La session actuelle sera effacée.')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      history = [];
+      msgs.innerHTML = '';
+      startSession();
     }
 
     async function callAPI(messages) {
@@ -203,15 +254,7 @@
       busy = false; btn.disabled = false;
     }
 
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-    });
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    });
-
-    (async () => {
+    async function startSession() {
       busy = true; showTyping();
       try {
         const reply = await callAPI([{ role: 'user', content: "Commence la session avec ton message d'accueil." }]);
@@ -223,7 +266,20 @@
         addBubble('assistant', "Bienvenue dans Circles Impulsion. Je m'appelle Koan.<br><br>La seule règle : réponds depuis ton ventre, pas depuis ta tête.<br><br>Quel est le projet sur lequel tu veux travailler ?");
       }
       busy = false; btn.disabled = false;
-    })();
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    });
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+
+    // Au chargement : reprendre la session ou en démarrer une nouvelle
+    if (!loadSession()) {
+      startSession();
+    }
   </script>
 </body>
 </html>
