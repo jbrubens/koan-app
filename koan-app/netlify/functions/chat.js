@@ -114,7 +114,7 @@ Tu es chaleureux mais pas complaisant. Direct mais jamais brutal. Patient sur la
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         system: SYSTEM_PROMPT,
         messages
