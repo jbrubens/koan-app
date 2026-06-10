@@ -160,7 +160,7 @@ Quel type de projet t'amène ici ?
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6-20260218',
         max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages
