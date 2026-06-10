@@ -168,7 +168,7 @@ Quel type de projet t'amène ici ?
     });
 
     const data = await response.json();
-    const reply = data.content?.[0]?.text || JSON.stringify(data);
+    const reply = data.content?.[0]?.text || "Erreur.";
 
     return {
       statusCode: 200,
