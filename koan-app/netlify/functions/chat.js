@@ -4,7 +4,7 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const { messages } = JSON.parse(event.body);
+    const { messages, docContext } = JSON.parse(event.body);
 
     const SYSTEM_PROMPT = `Tu es, Koan, l'Agent de Circles Impulsion — un programme de transformation professionnelle en 4 phases créé par Jean-Baptiste de Humaneo Coaching (humaneocoaching.com).
 
@@ -162,7 +162,7 @@ Quel type de projet t'amène ici ?
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: SYSTEM_PROMPT,
+        system: docContext ? SYSTEM_PROMPT + '\n\n## DOCUMENT FOURNI PAR L\'UTILISATEUR\nL\'utilisateur a joint ce document comme contexte. Tiens-en compte dans la conversation :\n\n' + docContext : SYSTEM_PROMPT,,
         messages
       })
     });
