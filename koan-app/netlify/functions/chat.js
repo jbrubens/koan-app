@@ -162,7 +162,7 @@ Quel type de projet t'amène ici ?
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: docContext ? SYSTEM_PROMPT + '\n\n## DOCUMENT FOURNI PAR L\'UTILISATEUR\nL\'utilisateur a joint ce document comme contexte. Tiens-en compte dans la conversation :\n\n' + docContext : SYSTEM_PROMPT,,
+        system: docContext ? SYSTEM_PROMPT + '\n\n## DOCUMENT FOURNI PAR L\'UTILISATEUR\nL\'utilisateur a joint ce document comme contexte. Tiens-en compte dans la conversation :\n\n' + docContext : SYSTEM_PROMPT,
         messages
       })
     });
